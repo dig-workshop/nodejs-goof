@@ -1,16 +1,18 @@
-# Goof - Snyk's vulnerable demo app
+# Goof - Snykの脆弱なデモアプリ
 [![Known Vulnerabilities](https://snyk.io/test/github/snyk/goof/badge.svg?style=flat-square)](https://snyk.io/test/github/snyk/goof)
 
-A vulnerable Node.js demo application, based on the [Dreamers Lab tutorial](http://dreamerslab.com/blog/en/write-a-todo-list-with-express-and-mongodb/).
+これは、[Dreamers Labチュートリアル](http://dreamerslab.com/blog/en/write-a-todo-list-with-express-and-mongodb/)に基づく脆弱なNode.jsデモアプリケーションです。
 
-## Features
+## 特徴
 
-This vulnerable app includes the following capabilities to experiment with:
-* [Exploitable packages](#exploiting-the-vulnerabilities) with known vulnerabilities
-* [Docker Image Scanning](#docker-image-scanning) for base images with known vulnerabilities in system libraries
-* [Runtime alerts](#runtime-alerts) for detecting an invocation of vulnerable functions in open source dependencies
+この脆弱なアプリは、次の機能を含んでいます：
 
-## Running
+- 既知の脆弱性を持つ[パッケージ](#exploiting-the-vulnerabilities)の使用
+- システムライブラリに既知の脆弱性があるベースイメージの[Dockerイメージスキャン](#docker-image-scanning)
+- オープンソース依存関係で脆弱な関数の呼び出しを検出する[ランタイムアラート](#runtime-alerts)
+
+## 実行方法
+
 ```bash
 mongod &
 
@@ -18,71 +20,70 @@ git clone https://github.com/snyk-labs/nodejs-goof
 npm install
 npm start
 ```
-This will run Goof locally, using a local mongo on the default port and listening on port 3001 (http://localhost:3001)
+これはGoofをローカルで実行し、デフォルトポートでローカルMongoDBを使用して、ポート3001（http://localhost:3001）でリッスンします。
 
-Note: You *have* to use an old version of MongoDB version due to some of these old libraries' database server APIs. MongoDB 3 is known to work ok.
+注意: 一部の古いライブラリのデータベースサーバAPIのため、古いMongoDBバージョンを使用する必要があります。MongoDB 3は正常に動作することが確認されています。
 
-You can also run the MongoDB server individually via Docker, such as:
+また、以下のようにMongoDBサーバをDockerで個別に実行できます：
 
 ```sh
 docker run --rm -p 27017:27017 mongo:3
 ```
 
-## Running with docker-compose
+## docker-composeでの実行
 ```bash
 docker-compose up --build
 docker-compose down
 ```
 
-### Heroku usage
+<!-- ### Heroku usage
 Goof requires attaching a MongoLab service to be deployed as a Heroku app. 
 That sets up the MONGOLAB_URI env var so everything after should just work. 
 
 ### CloudFoundry usage
 Goof requires attaching a MongoLab service and naming it "goof-mongo" to be deployed on CloudFoundry. 
-The code explicitly looks for credentials to that service. 
+The code explicitly looks for credentials to that service.  -->
 
-### Cleanup
-To bulk delete the current list of TODO items from the DB run:
+### クリーンアップ
+DBから現在のTODOアイテムのリストを一括削除するには、以下を実行します：
 ```bash
 npm run cleanup
 ```
 
-## Exploiting the vulnerabilities
+## 脆弱性の悪用
 
-This app uses npm dependencies holding known vulnerabilities,
-as well as insecure code that introduces code-level vulnerabilities.
+このアプリは、既知の脆弱性を含むnpm依存関係と、コードレベルの脆弱性を引き起こす不安定なコードを使用しています。
 
-The `exploits/` directory includes a series of steps to demonstrate each one.
+`exploits/`ディレクトリには、各脆弱性を示す手順が含まれています。
 
-### Vulnerabilities in open source dependencies
+### オープンソース依存関係の脆弱性
 
-Here are the exploitable vulnerable packages:
-- [Mongoose - Buffer Memory Exposure](https://snyk.io/vuln/npm:mongoose:20160116) - requires a version <= Node.js 8. For the exploit demo purposes, one can update the Dockerfile `node` base image to use `FROM node:6-stretch`.
-- [st - Directory Traversal](https://snyk.io/vuln/npm:st:20140206)
+以下の脆弱なパッケージがあります：
+- [Mongoose - バッファメモリ露出](https://snyk.io/vuln/npm:mongoose:20160116) - バージョン<=Node.js 8。デモ目的で、Dockerfileの`node`ベースイメージを`FROM node:6-stretch`に更新できます。
+- [st - ディレクトリトラバーサル](https://snyk.io/vuln/npm:st:20140206)
 - [ms - ReDoS](https://snyk.io/vuln/npm:ms:20151024)
 - [marked - XSS](https://snyk.io/vuln/npm:marked:20150520)
 
-### Vulnerabilities in code
+### コード内の脆弱性
 
-* Open Redirect
-* NoSQL Injection
-* Code Injection
-* Command execution
-* Cross-site Scripting (XSS)
-* Information exposure via Hardcoded values in code
-* Security misconfiguration exposes server information 
-* Insecure protocol (HTTP) communication 
+* オープンリダイレクト
+* NoSQLインジェクション
+* コードインジェクション
+* コマンド実行
+* クロスサイトスクリプティング（XSS）
+* コード内のハードコードされた値による情報漏洩
+* サーバ情報の露出によるセキュリティミスコンフィギュレーション
+* 不安全なプロトコル（HTTP）通信
 
-#### Code injection
+#### コードインジェクション
 
-The page at `/account_details` is rendered as an Handlebars view.
+`/account_details`ページはHandlebarsビューとしてレンダリングされます。
 
-The same view is used for both the GET request which shows the account details, as well as the form itself for a POST request which updates the account details. A so-called Server-side Rendering.
+このビューは、アカウント詳細を表示するGETリクエストと、アカウント詳細を更新するPOSTリクエストの両方で使用されます。いわゆるサーバーサイドレンダリングです。
 
-The form is completely functional. The way it works is, it receives the profile information from the `req.body` and passes it, as-is to the template. This however means, that the attacker is able to control a variable that flows directly from the request into the view template library.
+フォームは完全に機能します。動作としては、`req.body`からプロファイル情報を受け取り、そのままテンプレートに渡します。これにより、攻撃者はリクエストから直接テンプレートライブラリに流れる変数を制御できることになります。
 
-You'd think that what's the worst that can happen because we use a validation to confirm the expected input, however the validation doesn't take into account a new field that can be added to the object, such as `layout`, which when passed to a template language, could lead to Local File Inclusion (Path Traversal) vulnerabilities. Here is a proof-of-concept showing it:
+最悪の事態は起こらないと思うかもしれませんが、バリデーションが期待される入力を確認するために使われているにも関わらず、新たにオブジェクトに追加できるフィールド（例えば`layout`）を考慮していません。これをテンプレート言語に渡すと、ローカルファイルインクルージョン（パストラバーサル）脆弱性を引き起こす可能性があります。以下はその証明です：
 
 ```sh
 curl -X 'POST' --cookie c.txt --cookie-jar c.txt -H 'Content-Type: application/json' --data-binary '{"username": "admin@snyk.io", "password": "SuperSecretPassword"}' 'http://localhost:3001/login'
@@ -92,63 +93,62 @@ curl -X 'POST' --cookie c.txt --cookie-jar c.txt -H 'Content-Type: application/j
 curl -X 'POST' --cookie c.txt --cookie-jar c.txt -H 'Content-Type: application/json' --data-binary '{"email": "admin@snyk.io", "firstname": "admin", "lastname": "admin", "country": "IL", "phone": "+972551234123",  "layout": "./../package.json"}' 'http://localhost:3001/account_details'
 ```
 
-Actually, there's even another vulnerability in this code.
-The `validator` library that we use has several known regular expression denial of service vulnerabilities. One of them, is associated with the email regex, which if validated with the `{allow_display_name: true}` option then we can trigger a denial of service for this route:
+実際、このコードにはもう一つ脆弱性があります。  
+私たちが使用している`validator`ライブラリには、いくつかの既知の正規表現によるサービス拒否（DoS）脆弱性があります。その一つは、メールアドレスの正規表現に関連しており、`{allow_display_name: true}`オプションで検証すると、このルートでサービス拒否を引き起こす可能性があります：
 
 ```sh
 curl -X 'POST' -H 'Content-Type: application/json' --data-binary "{\"email\": \"`seq -s "" -f "<" 100000`\"}" 'http://localhost:3001/account_details'
 ```
 
-The `validator.rtrim()` sanitizer is also vulnerable, and we can use this to create a similar denial of service attack:
+`validator.rtrim()` サニタイザーも脆弱で、これを利用して同様のサービス拒否攻撃を作成できます：
 
 ```sh
 curl -X 'POST' -H 'Content-Type: application/json' --data-binary "{\"email\": \"someone@example.com\", \"country\": \"nop\", \"phone\": \"0501234123\", \"lastname\": \"nop\", \"firstname\": \"`node -e 'console.log(" ".repeat(100000) + "!")'`\"}" 'http://localhost:3001/account_details'
 ```
 
-#### NoSQL injection
+#### NoSQLインジェクション
 
-A POST request to `/login` will allow for authentication and signing-in to the system as an administrator user.
-It works by exposing `loginHandler` as a controller in `routes/index.js` and uses a MongoDB database and the `User.find()` query to look up the user's details (email as a username and password). One issue is that it indeed stores passwords in plaintext and not hashing them. However, there are other issues in play here.
+`/login` へのPOSTリクエストは、システムに管理者ユーザーとして認証し、サインインすることを可能にします。これにより、`loginHandler`が`routes/index.js`のコントローラーとして公開され、MongoDBデータベースと`User.find()`クエリを使用してユーザーの詳細（メールアドレスとパスワード）を検索します。問題の一つは、パスワードが平文で保存され、ハッシュ化されていないことです。しかし、ここには他にも問題があります。
 
+誤ったパスワードでリクエストを送信して、失敗する様子を確認できます。
 
-We can send a request with an incorrect password to see that we get a failed attempt
 ```sh
 echo '{"username":"admin@snyk.io", "password":"WrongPassword"}' | http --json $GOOF_HOST/login -v
 ```
 
-And another request, as denoted with the following JSON request to sign-in as the admin user works as expected:
+そして、次のJSONリクエストを使って管理者ユーザーとしてサインインするリクエストは、期待通りに動作します。
 ```sh
 echo '{"username":"admin@snyk.io", "password":"SuperSecretPassword"}' | http --json $GOOF_HOST/login -v
 ```
 
-However, what if the password wasn't a string? what if it was an object? Why would an object be harmful or even considered an issue?
-Consider the following request:
+しかし、パスワードが文字列ではなくオブジェクトだった場合はどうでしょうか？オブジェクトが有害または問題として考えられる理由は何でしょうか？
+次のリクエストを考えてみてください：
 ```sh
 echo '{"username": "admin@snyk.io", "password": {"$gt": ""}}' | http --json $GOOF_HOST/login -v
 ```
 
-We know the username, and we pass on what seems to be an object of some sort.
-That object structure is passed as-is to the `password` property and has a specific meaning to MongoDB - it uses the `$gt` operation which stands for `greater than`. So, we in essence tell MongoDB to match that username with any record that has a password that is greater than `empty string` which is bound to hit a record. This introduces the NoSQL Injection vector.
+私たちはユーザー名を知っており、何らかのオブジェクトのように見えるものを渡します。
+そのオブジェクト構造はそのまま `password` プロパティに渡され、MongoDBに特定の意味を持ちます - それは `$gt` 演算子を使用して「空文字列より大きい」という意味になります。したがって、実際には、空文字列より大きいパスワードを持つレコードを照合するようMongoDBに指示しており、これがNoSQLインジェクションベクターを引き起こします。
 
-#### Open redirect
+#### オープンリダイレクト
 
-The `/admin` view introduces a `redirectPage` query path, as follows in the admin view:
+`/admin` ビューは、管理ビュー内で次のように `redirectPage` クエリパスを導入します：
 
 ```
 <input type="hidden" name="redirectPage" value="<%- redirectPage %>" />
 ```
 
-One fault here is that the `redirectPage` is rendered as raw HTML and not properly escaped, because it uses `<%- >` instead of `<%= >`. That itself, introduces a Cross-site Scripting (XSS) vulnerability via:
+ここでの問題は、`redirectPage` が生のHTMLとしてレンダリングされ、適切にエスケープされていないことです。なぜなら、`<%- >` が使用されており、`<%= >` ではないからです。このこと自体が、次のようにクロスサイトスクリプティング（XSS）脆弱性を引き起こします：
 
 ```
 http://localhost:3001/login?redirectPage="><script>alert(1)</script>
 ```
 
-To exploit the open redirect, simply provide a URL such as `redirectPage=https://google.com` which exploits the fact that the code doesn't enforce local URLs in `index.js:72`.
+オープンリダイレクトを悪用するには、`redirectPage=https://google.com` のようなURLを提供するだけで、コードが `index.js:72` でローカルURLを強制しない事実を利用します。
 
-#### Hardcoded values - session information
+#### ハードコードされた値 - セッション情報
 
-The application initializes a cookie-based session on `app.js:40` as follows:
+アプリケーションは、`app.js:40` で以下のようにクッキーをベースにしたセッションを初期化します：
 
 ```js
 app.use(session({
@@ -158,27 +158,27 @@ app.use(session({
 }))
 ```
 
-As you can see, the session `secret` used to sign the session is a hardcoded sensitive information inside the code.
+ご覧の通り、セッションの `secret` はコード内にハードコードされた機密情報です。
 
-First attempt to fix it, can be to move it out to a config file such as:
+最初の修正案として、これを設定ファイルに移動する方法があります。例えば：
 ```js
 module.exports = {
     cookieSecret: `keyboard cat`
 }
 ```
 
-And then require the configuration file and use it to initialize the session.
-However, that still maintains the secret information inside another file, and Snyk Code will warn you about it.
+その後、設定ファイルを読み込んでセッションの初期化時に使用します。
+ただし、それでも秘密情報が別のファイル内に保持されており、Snyk Codeはその点を警告します。
 
-Another case we can discuss here in session management, is that the cookie setting is initialized with `secure: true` which means it will only be transmitted over HTTPS connections. However, there's no `httpOnly` flag set to true, which means that the default false value of it makes the cookie accessible via JavaScript. Snyk Code highlights this potential security misconfiguration so we can fix it. We can note that Snyk Code shows this as a quality information, and not as a security error.
+セッション管理に関してもう1つ議論できる点は、`secure: true` でクッキーが設定されており、HTTPS接続でのみ送信されることですが、`httpOnly` フラグが `true` に設定されていないため、クッキーがJavaScriptからアクセス可能である点です。Snyk Codeはこの潜在的なセキュリティミス設定を強調表示します。この問題はセキュリティエラーとしてではなく、品質情報として表示されます。
 
-Snyk Code will also find hardcoded secrets in source code that isn't part of the application logic, such as `tests/` or `examples/` folders. We have a case of that in this application with the `tests/authentication.component.spec.js` file. In the finding, Snyk Code will tag it as `InTest`, `Tests`, or `Mock`, which help us easily triage it and indeed ignore this finding as it isn't actually a case of information exposure.
+Snyk Codeは、アプリケーションロジックに含まれないソースコード内のハードコードされた秘密情報も検出します。例えば、`tests/` や `examples/` フォルダ内にそのようなケースがあります。このアプリケーションでは `tests/authentication.component.spec.js` ファイルが該当します。この場合、Snyk Codeは `InTest`、`Tests`、または `Mock` とタグ付けされ、実際の情報漏洩ではないため、この検出を無視できます。
 
-## Docker Image Scanning
+## Dockerイメージのスキャン
 
-The `Dockerfile` makes use of a base image (`node:6-stretch`) that is known to have system libraries with vulnerabilities.
+`Dockerfile` は、脆弱性を持つシステムライブラリを含む既知のベースイメージ（`node:6-stretch`）を使用しています。
 
-To scan the image for vulnerabilities, run:
+イメージの脆弱性をスキャンするには、次のコマンドを実行します：
 ```bash
 snyk test --docker node:6-stretch --file=Dockerfile
 ```
@@ -188,7 +188,7 @@ To monitor this image and receive alerts with Snyk:
 snyk monitor --docker node:6-stretch
 ```
 
-## Runtime Alerts
+<!-- ## Runtime Alerts
 
 Snyk provides the ability to monitor application runtime behavior and detect an invocation of a function is known to be vulnerable and used within open source dependencies that the application makes use of.
 
@@ -211,4 +211,4 @@ snyk wizard
 ```
 
 In this application, the default `snyk wizard` answers will fix all the issues.
-When the wizard is done, restart the application and run the exploits again to confirm they are fixed.
+When the wizard is done, restart the application and run the exploits again to confirm they are fixed. -->
