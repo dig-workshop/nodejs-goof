@@ -19,7 +19,8 @@ services:
       - "27017:27017"
   good-mysql:
     container_name: goof-mysql
-    image: mysql:5
+    image: mysql:5.7
+    platform: linux/amd64
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: acme
