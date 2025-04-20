@@ -16,7 +16,6 @@
 ```bash
 mongod &
 
-git clone https://github.com/snyk-labs/nodejs-goof
 npm install
 npm start
 ```
